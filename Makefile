@@ -1,4 +1,4 @@
-CC=gcc
+CC=g++
 CFLAGS=-Wall -Wextra -Werror -I$(INCLUDE_DIR) -I$(UNITY_DIR) -MMD -MP
 
 OUTPUT_NAME=output
@@ -9,17 +9,17 @@ INCLUDE_DIR=include
 TEST_DIR=tests
 UNITY_DIR=unity
 
-SRCS=$(wildcard $(SRC_DIR)/*.c)
-OBJS=$(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SRCS))
+SRCS=$(wildcard $(SRC_DIR)/*.cpp)
+OBJS=$(patsubst $(SRC_DIR)/%.cpp,$(BUILD_DIR)/%.o,$(SRCS))
 DEPS=$(OBJS:.o=.d)
 TARGET=$(BUILD_DIR)/$(OUTPUT_NAME)
 
-TEST_SRCS=$(wildcard $(TEST_DIR)/*.c)
-TEST_OBJS=$(patsubst $(TEST_DIR)/%.c,$(BUILD_DIR)/%.test.o,$(TEST_SRCS))
+TEST_SRCS=$(wildcard $(TEST_DIR)/*.cpp)
+TEST_OBJS=$(patsubst $(TEST_DIR)/%.cpp,$(BUILD_DIR)/%.test.o,$(TEST_SRCS))
 TEST_DEPS=$(TEST_OBJS:.o=.d)
 TEST_TARGET=$(BUILD_DIR)/tests
 
-UNITY_SRC = $(UNITY_DIR)/unity.c
+UNITY_SRC = $(UNITY_DIR)/unity.cpp
 UNITY_OBJ = $(BUILD_DIR)/unity.o
 
 LIB_OBJS=$(filter-out $(BUILD_DIR)/main.o,$(OBJS))
@@ -28,10 +28,10 @@ default: all
 
 all: $(TARGET)
 
-$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c | $(BUILD_DIR)
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(BUILD_DIR)/%.test.o: $(TEST_DIR)/%.c | $(BUILD_DIR)
+$(BUILD_DIR)/%.test.o: $(TEST_DIR)/%.cpp | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(BUILD_DIR):
@@ -49,8 +49,11 @@ clean:
 run: all
 	@./$(TARGET)
 
-test: $(TEST_TARGET)
-	@./$(TEST_TARGET)
+debug: CFLAGS += -g
+debug: clean all
+
+# test: $(TEST_TARGET)
+# 	@./$(TEST_TARGET)
 
 $(UNITY_OBJ): $(UNITY_SRC) | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c $(UNITY_SRC) -o $(UNITY_OBJ)
