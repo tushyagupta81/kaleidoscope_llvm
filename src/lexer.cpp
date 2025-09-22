@@ -3,6 +3,9 @@
 #include <cstdio>
 #include <string>
 
+std::string IdentifierStr;
+double NumVal;
+
 int gettok() {
   static int LastChar = ' ';
 

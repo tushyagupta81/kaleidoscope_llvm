@@ -1,7 +1,13 @@
 CC=g++
-CFLAGS=-Wall -Wextra -Werror -I$(INCLUDE_DIR) -I$(UNITY_DIR) -MMD -MP
+
+LLVM_CXXFLAGS := $(shell llvm-config --cxxflags)
+LLVM_LDFLAGS  := $(shell llvm-config --ldflags --system-libs --libs core)
+
+CFLAGS=-Wall -Wextra -Werror -I$(INCLUDE_DIR) -I$(UNITY_DIR) -MMD -MP $(LLVM_CXXFLAGS)
 
 OUTPUT_NAME=output
+
+LDFLAGS = $(LLVM_LDFLAGS)
 
 BUILD_DIR=build
 SRC_DIR=src
@@ -38,10 +44,10 @@ $(BUILD_DIR):
 	@mkdir -p $(BUILD_DIR)
 
 $(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) $^ -o $@
+	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 
 $(TEST_TARGET): $(LIB_OBJS) $(TEST_OBJS) $(UNITY_OBJ)
-	$(CC) $(CFLAGS) $^ -o $@
+	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 
 clean:
 	rm -r ./build

@@ -2,6 +2,7 @@
 #include "AST.hpp"
 #include "lexer.hpp"
 #include <cstdio>
+#include <llvm/IR/Value.h>
 #include <memory>
 #include <vector>
 
@@ -19,6 +20,11 @@ std::unique_ptr<ExprAST> LogError(const char *Str) {
 }
 
 std::unique_ptr<PrototypeAST> LogErrorP(const char *Str) {
+  LogError(Str);
+  return nullptr;
+}
+
+llvm::Value *LogErrorV(const char *Str) {
   LogError(Str);
   return nullptr;
 }
@@ -114,7 +120,7 @@ static std::unique_ptr<PrototypeAST> ParseExtern() {
 
 static std::unique_ptr<FunctionAST> ParseTopLevelExpr() {
   if (auto E = ParseExpression()) {
-    auto Proto = std::make_unique<PrototypeAST>("", std::vector<std::string>());
+    auto Proto = std::make_unique<PrototypeAST>("__anon_func__", std::vector<std::string>());
     return std::make_unique<FunctionAST>(std::move(Proto), std::move(E));
   }
 
@@ -196,38 +202,77 @@ static std::unique_ptr<ExprAST> ParsePrimary() {
   }
 }
 
+std::unique_ptr<llvm::LLVMContext> TheContext;
+std::unique_ptr<llvm::IRBuilder<>> Builder;
+std::unique_ptr<llvm::Module> TheModule;
+std::map<std::string, llvm::Value *> NamedValues;
+
+static void InitializeModule() {
+  // Open a new context and module.
+  TheContext = std::make_unique<llvm::LLVMContext>();
+  TheModule = std::make_unique<llvm::Module>("my cool jit", *TheContext);
+
+  // Create a new builder for the module.
+  Builder = std::make_unique<llvm::IRBuilder<>>(*TheContext);
+}
+
 static void HandleDefinition() {
-  if (ParseDefinition()) {
-    fprintf(stderr, "Parsed a function definition.\n");
+  if (auto FnAST = ParseDefinition()) {
+    if (auto *FnIR = FnAST->codegen()) {
+      fprintf(stderr, "Read function definition:\n");
+      FnIR->print(llvm::errs());
+      fprintf(stderr, "\n");
+    }
   } else {
+    // Skip token for error recovery.
     getNextTok();
   }
 }
 
 static void HandleExtern() {
-  if (ParseExtern()) {
-    fprintf(stderr, "Parsed an extern\n");
+  if (auto ProtoAST = ParseExtern()) {
+    if (auto *FnIR = ProtoAST->codegen()) {
+      fprintf(stderr, "Read extern:\n");
+      FnIR->print(llvm::errs());
+      fprintf(stderr, "\n");
+    }
   } else {
+    // Skip token for error recovery.
     getNextTok();
   }
 }
 
 static void HandleTopLevelExpression() {
-  if (ParseTopLevelExpr()) {
-    fprintf(stderr, "Parsed a top-level expr\n");
+  // Evaluate a top-level expression into an anonymous function.
+  if (auto FnAST = ParseTopLevelExpr()) {
+    if (auto *FnIR = FnAST->codegen()) {
+      fprintf(stderr, "Read top-level expression:\n");
+      FnIR->print(llvm::errs());
+      fprintf(stderr, "\n");
+
+      // Remove the anonymous expression.
+      FnIR->eraseFromParent();
+    }
   } else {
+    // Skip token for error recovery.
     getNextTok();
   }
 }
 
+/// top ::= definition | external | expression | ';'
 void MainLoop() {
   fprintf(stderr, "ready> ");
   getNextTok();
-  while (true) {
+
+  InitializeModule();
+
+  bool run = true;
+  while (run) {
     fprintf(stderr, "ready> ");
     switch (CurTok) {
     case tok_eof:
-      return;
+      run = false;
+      break;
     case ';': // ignore top-level semicolons.
       getNextTok();
       break;
@@ -242,4 +287,6 @@ void MainLoop() {
       break;
     }
   }
+
+  TheModule->print(llvm::errs(), nullptr);
 }

@@ -12,7 +12,7 @@ enum Token {
   tok_number = -5,
 };
 
-static std::string IdentifierStr;
-static double NumVal;
+extern std::string IdentifierStr;
+extern double NumVal;
 
 #endif // !LEXER_H
