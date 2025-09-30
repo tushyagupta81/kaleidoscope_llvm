@@ -3,7 +3,7 @@ CC=g++
 LLVM_CXXFLAGS := $(shell llvm-config --cxxflags)
 LLVM_LDFLAGS  := $(shell llvm-config --ldflags --system-libs --libs core)
 
-CFLAGS=-Wall -Wextra -Werror -I$(INCLUDE_DIR) -I$(UNITY_DIR) -MMD -MP $(LLVM_CXXFLAGS)
+CFLAGS=-Wall -Wextra -Werror -I$(INCLUDE_DIR) -I$(UNITY_DIR) -MMD -MP $(LLVM_CXXFLAGS) -Wno-unused-parameter
 
 OUTPUT_NAME=output
 
